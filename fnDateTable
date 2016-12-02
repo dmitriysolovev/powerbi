@@ -6,26 +6,27 @@ let fnDateTable = (StartDate as date, EndDate as date, optional Culture as nulla
     ChangedType = Table.TransformColumnTypes(TableFromList,{{"Column1", type date}}),
     RenamedColumns = Table.RenameColumns(ChangedType,{{"Column1", "Date"}}),
     InsertYear = Table.AddColumn(RenamedColumns, "Year", each Date.Year([Date]),type text),
-    InsertQuarterNum = Table.AddColumn(InsertYear, "QuarterNum", each Date.QuarterOfYear([Date])),
-    InsertQuarter = Table.AddColumn(InsertQuarterNum, "Quarter", each "Q" & Number.ToText([QuarterNum])),
-    InsertMonth = Table.AddColumn(InsertQuarter, "MonthOfYear", each Date.Month([Date]), type text),
+    InsertQuarterNum = Table.AddColumn(InsertYear, "Quarter Num", each Date.QuarterOfYear([Date])),
+    InsertQuarter = Table.AddColumn(InsertQuarterNum, "Quarter", each "Q" & Number.ToText([Quarter Num])),
+    InsertMonth = Table.AddColumn(InsertQuarter, "Month Num", each Date.Month([Date]), type text),
     InsertStartOfMonth = Table.AddColumn(InsertMonth, "StartOfMonth", each Date.StartOfMonth([Date]), type date),
-    InsertDay = Table.AddColumn(InsertStartOfMonth, "DayOfMonth", each Date.Day([Date])),
-    InsertDayInt = Table.AddColumn(InsertDay, "DateInt", each [Year] * 10000 + [MonthOfYear] * 100 + [DayOfMonth]),
+    InsertEndOfMonth = Table.AddColumn(InsertStartOfMonth, "EndOfMonth", each Date.EndOfMonth([Date]), type date),
+    InsertDay = Table.AddColumn(InsertEndOfMonth, "DayOfMonth", each Date.Day([Date])),
+    InsertDayInt = Table.AddColumn(InsertDay, "DateInt", each [Year] * 10000 + [Month Num] * 100 + [DayOfMonth]),
     InsertMonthName = Table.AddColumn(InsertDayInt, "Month", each Date.ToText([Date], "MMMM", Culture), type text),
-    InsertShortMonthName = Table.AddColumn(InsertMonthName, "Mnth", each Date.ToText([Date], "MMM", Culture), type text),
-    InsertCalendarMonth = Table.AddColumn(InsertShortMonthName, "Mnth Year", each [Mnth]& " " & Number.ToText([Year]),type text),
-    InsertCalendarQtr = Table.AddColumn(InsertCalendarMonth, "Qrt Year", each "Q" & Number.ToText([QuarterNum]) & " " & Number.ToText([Year]), type text),
-    InsertDayWeek = Table.AddColumn(InsertCalendarQtr, "DayInWeek", each Date.DayOfWeek([Date])),
-    InsertDayName = Table.AddColumn(InsertDayWeek, "Week Day", each Date.ToText([Date], "dddd", Culture), type text),
-InsertShortDayName = Table.AddColumn(InsertDayName, "DayOfWeek", each Date.ToText([Date], "ddd", Culture), type text),
-    InsertWeekEnding = Table.AddColumn(InsertShortDayName , "Week Ending", each Date.EndOfWeek([Date]), type date),
-    InsertWeekNumber= Table.AddColumn(InsertWeekEnding, "Week Number", each Date.WeekOfYear([Date])),
-    InsertMonthnYear = Table.AddColumn(InsertWeekNumber,"MonthnYear", each [Year] * 10000 + [MonthOfYear] * 100),
-    InsertQuarternYear = Table.AddColumn(InsertMonthnYear,"QuarternYear", each [Year] * 10000 + [QuarterNum] * 100),
-    ChangedType1 = Table.TransformColumnTypes(InsertQuarternYear,{{"QuarternYear", Int64.Type},{"Week Number", Int64.Type},{"Quarter", type text},{"Year", type text},{"MonthnYear", Int64.Type}, {"DateInt", Int64.Type}, {"DayOfMonth", Int64.Type}, {"MonthOfYear", Int64.Type}, {"QuarterNum", Int64.Type}, {"DayInWeek", Int64.Type}})
-
-    in
+    InsertShortMonthName = Table.AddColumn(InsertMonthName, "Month short", each Date.ToText([Date], "MMM", Culture), type text),
+    InsertCalendarMonth = Table.AddColumn(InsertShortMonthName, "Month Year", each [Month short]& " " & Number.ToText([Year]),type text),
+    InsertCalendarQtr = Table.AddColumn(InsertCalendarMonth, "Quarter Year", each "Q" & Number.ToText([Quarter Num]) & " " & Number.ToText([Year]), type text),
+    InsertDayWeek = Table.AddColumn(InsertCalendarQtr, "Weekday Num", each Date.DayOfWeek([Date])),
+    InsertDayName = Table.AddColumn(InsertDayWeek, "Weekday", each Date.ToText([Date], "dddd", Culture), type text),
+    InsertShortDayName = Table.AddColumn(InsertDayName, "Weekday short", each Date.ToText([Date], "ddd", Culture), type text),
+    InsertWeekEnding = Table.AddColumn(InsertShortDayName , "EndOfWeek", each Date.EndOfWeek([Date]), type date),
+    InsertWeekNumber= Table.AddColumn(InsertWeekEnding, "Week Num", each Date.WeekOfYear([Date])),
+    InsertMonthWeekNumber= Table.AddColumn(InsertWeekNumber, "WeekOfMonth Num", each Date.WeekOfMonth([Date])),
+    InsertMonthnYear = Table.AddColumn(InsertMonthWeekNumber,"Month-YearOrder", each [Year] * 10000 + [Month Num] * 100),
+    InsertQuarternYear = Table.AddColumn(InsertMonthnYear,"Quarter-YearOrder", each [Year] * 10000 + [Quarter Num] * 100),
+    ChangedType1 = Table.TransformColumnTypes(InsertQuarternYear,{{"Quarter-YearOrder", Int64.Type},{"Week Num", Int64.Type},{"WeekOfMonth Num", Int64.Type},{"Quarter", type text},{"Year", type text},{"Month-YearOrder", Int64.Type}, {"DateInt", Int64.Type}, {"DayOfMonth", Int64.Type}, {"Month Num", Int64.Type}, {"Quarter Num", Int64.Type}, {"Weekday Num", Int64.Type}})
+  in
     ChangedType1
 in
     fnDateTable
