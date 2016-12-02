@@ -1,0 +1,36 @@
+let fnDateTimeTable = (StartDate as date, EndDate as date, IncrementMinutes as number, optional Culture as nullable text) as table =>
+  let
+TimeCount = Duration.TotalMinutes(#datetime(Date.Year(EndDate),Date.Month(EndDate),Date.Day(EndDate),23,59,59)- #datetime(Date.Year(StartDate),Date.Month(StartDate),Date.Day(StartDate),0,0,0))/IncrementMinutes,
+    Source = List.DateTimes(#datetime(Date.Year(StartDate),Date.Month(StartDate),Date.Day(StartDate),0,0,0),TimeCount,#duration(0,0,IncrementMinutes,0)),
+    TableFromList = Table.FromList(Source, Splitter.SplitByNothing()),    
+    ChangedType = Table.TransformColumnTypes(TableFromList,{{"Column1", type datetime}}),
+    RenamedColumns = Table.RenameColumns(ChangedType,{{"Column1", "DateTime"}}),
+    InsertDate = Table.AddColumn(RenamedColumns, "Date", each Date.From([DateTime]), type date),
+    InsertTime = Table.AddColumn(InsertDate, "Time", each Time.From([DateTime]), type time),
+    InsertHour = Table.AddColumn(InsertTime, "Hour", each Time.Hour([DateTime]), Int64.Type),
+    InsertDateHour = Table.AddColumn(InsertHour, "DateHour", each #datetime(Date.Year([DateTime]),Date.Month([DateTime]),Date.Day([DateTime]),Time.Hour([DateTime]),0,0), type datetime),
+    InsertYear = Table.AddColumn(InsertDateHour, "Year", each Date.Year([Date]),type text),
+    InsertQuarterNum = Table.AddColumn(InsertYear, "QuarterNum", each Date.QuarterOfYear([Date])),
+    InsertQuarter = Table.AddColumn(InsertQuarterNum, "Quarter", each "Q" & Number.ToText([QuarterNum])),
+    InsertMonth = Table.AddColumn(InsertQuarter, "MonthOfYear", each Date.Month([Date]), type text),
+    InsertStartOfMonth = Table.AddColumn(InsertMonth, "StartOfMonth", each Date.StartOfMonth([Date]), type date),
+    InsertEndOfMonth = Table.AddColumn(InsertStartOfMonth, "EndOfMonth", each Date.EndOfMonth([Date]), type date),
+    InsertDay = Table.AddColumn(InsertEndOfMonth, "DayOfMonth", each Date.Day([Date])),
+    InsertDayInt = Table.AddColumn(InsertDay, "DateInt", each [Year] * 10000 + [MonthOfYear] * 100 + [DayOfMonth]),
+    InsertMonthName = Table.AddColumn(InsertDayInt, "Month", each Date.ToText([Date], "MMMM", Culture), type text),
+    InsertShortMonthName = Table.AddColumn(InsertMonthName, "Mnth", each Date.ToText([Date], "MMM", Culture), type text),
+    InsertCalendarMonth = Table.AddColumn(InsertShortMonthName, "Mnth Year", each [Mnth]& " " & Number.ToText([Year]),type text),
+    InsertCalendarQtr = Table.AddColumn(InsertCalendarMonth, "Qrt Year", each "Q" & Number.ToText([QuarterNum]) & " " & Number.ToText([Year]), type text),
+    InsertDayWeek = Table.AddColumn(InsertCalendarQtr, "DayInWeek", each Date.DayOfWeek([Date])),
+    InsertDayName = Table.AddColumn(InsertDayWeek, "Week Day", each Date.ToText([Date], "dddd", Culture), type text),
+InsertShortDayName = Table.AddColumn(InsertDayName, "DayOfWeek", each Date.ToText([Date], "ddd", Culture), type text),
+    InsertWeekEnding = Table.AddColumn(InsertShortDayName , "Week Ending", each Date.EndOfWeek([Date]), type date),
+    InsertWeekNumber= Table.AddColumn(InsertWeekEnding, "Week Number", each Date.WeekOfYear([Date])),
+    InsertMonthnYear = Table.AddColumn(InsertWeekNumber,"MonthnYear", each [Year] * 10000 + [MonthOfYear] * 100),
+    InsertQuarternYear = Table.AddColumn(InsertMonthnYear,"QuarternYear", each [Year] * 10000 + [QuarterNum] * 100),
+    ChangedType1 = Table.TransformColumnTypes(InsertQuarternYear,{{"QuarternYear", Int64.Type},{"Week Number", Int64.Type},{"Quarter", type text},{"Year", type text},{"MonthnYear", Int64.Type}, {"DateInt", Int64.Type}, {"DayOfMonth", Int64.Type}, {"MonthOfYear", Int64.Type}, {"QuarterNum", Int64.Type}, {"DayInWeek", Int64.Type}})
+
+    in
+    ChangedType1
+in
+    fnDateTimeTable
