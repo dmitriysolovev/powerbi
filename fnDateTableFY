@@ -1,0 +1,55 @@
+let fnDateTable = (StartDate as date, EndDate as date, FYStartMonth as number) as table =>
+ 
+let
+    DayCount = Duration.Days(Duration.From(EndDate - StartDate))+1,
+    FiscalMonthCalc = 12-FYStartMonth, 
+    Source = List.Dates(StartDate,DayCount,#duration(1,0,0,0)),
+    TableFromList = Table.FromList(Source, Splitter.SplitByNothing()),    
+    ChangedType = Table.TransformColumnTypes(TableFromList,{{"Column1", type date}}),
+    RenamedColumns = Table.RenameColumns(ChangedType,{{"Column1", "Date"}}),
+    InsertYear = Table.AddColumn(RenamedColumns, "Year", each Date.Year([Date])),
+    InsertQuarterNum = Table.AddColumn(InsertYear, "Quarter Num", each Date.QuarterOfYear([Date])),
+    InsertQuarter = Table.AddColumn(InsertQuarterNum, "Quarter", each "Q" & Number.ToText([Quarter Num])),
+    InsertMonth = Table.AddColumn(InsertQuarter, "Month Num", each Date.Month([Date])),
+    InsertStartOfMonth = Table.AddColumn(InsertMonth, "StartOfMonth", each Date.StartOfMonth([Date]), type date),
+    InsertEndOfMonth = Table.AddColumn(InsertStartOfMonth, "EndOfMonth", each Date.EndOfMonth([Date]), type date),
+    InsertDay = Table.AddColumn(InsertEndOfMonth, "DayOfMonth", each Date.Day([Date])),
+    InsertDayInt = Table.AddColumn(InsertDay, "DateInt", each [Year] * 10000 + [Month Num] * 100 + [DayOfMonth],Int64.Type),
+    InsertMonthName = Table.AddColumn(InsertDayInt, "Month", each Date.ToText([Date], "MMMM"), type text),
+    InsertShortMonthName = Table.AddColumn(InsertMonthName, "Month short", each Date.ToText([Date], "MMM"), type text),
+    InsertCalendarMonth = Table.AddColumn(InsertShortMonthName, "Month Year", each [Month short]& " " & Number.ToText([Year]),type text),
+    InsertCalendarQtr = Table.AddColumn(InsertCalendarMonth, "Quarter Year", each "Q" & Number.ToText([Quarter Num]) & " " & Number.ToText([Year]), type text),
+    InsertDayWeek = Table.AddColumn(InsertCalendarQtr, "Weekday Num", each Date.DayOfWeek([Date],1),Int8.Type),
+    InsertDayName = Table.AddColumn(InsertDayWeek, "Weekday", each Date.ToText([Date], "dddd"), type text),
+    InsertShortDayName = Table.AddColumn(InsertDayName, "Weekday short", each Date.ToText([Date], "ddd"), type text),
+    InsertWeekEndDate = Table.AddColumn(InsertShortDayName , "EndOfWeek", each Date.EndOfWeek([Date],1), type date),
+    InsertWeekStartDate = Table.AddColumn(InsertWeekEndDate, "StartOfWeek", each Date.StartOfWeek([Date],1), type date),
+    InsertWeekNumber= Table.AddColumn(InsertWeekStartDate, "Week Num", each Date.WeekOfYear([Date]),Int8.Type),
+    InsertMonthWeekNumber= Table.AddColumn(InsertWeekNumber, "WeekOfMonth Num", each Date.WeekOfMonth([Date]),Int8.Type),
+    InsertMonthnYearOrder = Table.AddColumn(InsertMonthWeekNumber,"Month-YearOrder", each [Year] * 10000 + [Month Num] * 100,Int64.Type),
+    InsertQuarternYearOrder = Table.AddColumn(InsertMonthnYearOrder,"Quarter-YearOrder", each [Year] * 10000 + [Quarter Num] * 100,Int64.Type),
+    InsertShortYear = Table.AddColumn(InsertQuarternYearOrder, "Short Year", each Text.End(Text.From([Year], "en-US"), 2), type text),
+    InsertFiscalYear = Table.AddColumn(InsertShortYear, "Fiscal Year", each if [Month Num] < FYStartMonth then Date.Year([Date]) else Date.Year([Date])+1),
+    InsertShortFiscalYear = Table.AddColumn(InsertFiscalYear, "Fiscal Year Short", each Text.AfterDelimiter(Text.From([Fiscal Year]), "0", 0), type text),
+    InsertFY = Table.AddColumn(InsertShortFiscalYear, "FY", each Text.Combine({"FY ", Text.From([Fiscal Year Short])}), type text),
+    InsertFiscalMonth = Table.DuplicateColumn(InsertFY, "Month short", "Fiscal Month"),
+    InsertFiscalMonthSortOrder = Table.AddColumn(InsertFiscalMonth, "Fiscal Month Sort Order", each Number.Mod([Month Num]+FiscalMonthCalc ,12)+1, Int8.Type),
+    InsertFiscalQuarter = Table.AddColumn(InsertFiscalMonthSortOrder, "Fiscal Quarter", each if [Fiscal Month Sort Order] >= 1 and [Fiscal Month Sort Order] <= 3 then "Q1" 
+    else if [Fiscal Month Sort Order] >= 4 and [Fiscal Month Sort Order] <= 6 then "Q2"  
+    else if [Fiscal Month Sort Order] >= 7 and [Fiscal Month Sort Order] <= 9 then "Q3"  
+    else if [Fiscal Month Sort Order] >= 10 and [Fiscal Month Sort Order] <= 12 then "Q4"  
+    else "NA",type text),
+    InsertFiscalQuarterSortOrder = Table.AddColumn(InsertFiscalQuarter, "Fiscal Quarter Number", each if [Fiscal Month Sort Order] >= 1 and [Fiscal Month Sort Order] <= 3 then 1 
+    else if [Fiscal Month Sort Order] >= 4 and [Fiscal Month Sort Order] <= 6 then 2  
+    else if [Fiscal Month Sort Order] >= 7 and [Fiscal Month Sort Order] <= 9 then 3  
+    else if [Fiscal Month Sort Order] >= 10 and [Fiscal Month Sort Order] <= 12 then 4  
+    else 0,Int8.Type),
+    InsertFiscalMonthYear = Table.AddColumn(InsertFiscalQuarterSortOrder, "Fiscal Month Year", each Text.Combine({[Month short], " ", Text.From([Fiscal Year])}), type text),
+    InsertFiscalQuarterYear = Table.AddColumn(InsertFiscalMonthYear, "Fiscal Quarter Year", each Text.Combine({[Fiscal Quarter], " ", Text.From([Fiscal Year])}), type text),
+    InsertFiscalMonthYearOrder = Table.AddColumn(InsertFiscalQuarterYear, "Fiscal Month Year Order", each [Fiscal Year] * 10000 + [Fiscal Month Sort Order] * 100,Int64.Type),
+    InsertFiscalQuarterYearOrder = Table.AddColumn(InsertFiscalMonthYearOrder, "Fiscal Quarter-Year Order", each [Fiscal Year] * 10000 + [Fiscal Quarter Number] * 100,Int64.Type),
+    #"Changed Type" = Table.TransformColumnTypes(InsertFiscalQuarterYearOrder,{{"Month Num", Int64.Type}, {"Quarter Num", Int64.Type}})
+    in
+   #"Changed Type"
+in
+    fnDateTable
