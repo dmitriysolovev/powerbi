@@ -1,4 +1,4 @@
-let fnDateTableRus = (#"Дата начала" as date, #"Дата окончания" as date) as table =>
+let fnDateTableRus = (#"Дата начала" as date, #"Дата окончания" as date,optional #"Культура" as nullable text) as table =>
   let
     DayCount = Duration.Days(Duration.From(#"Дата окончания" - #"Дата начала"))+1,
     Source = List.Dates(#"Дата начала",DayCount,#duration(1,0,0,0)),
@@ -13,15 +13,16 @@ let fnDateTableRus = (#"Дата начала" as date, #"Дата оконча�
  InsertEndOfMonth = Table.AddColumn(InsertStartOfMonth , "Конец месяца", each Date.EndOfMonth([Дата]), type date),
     InsertDay = Table.AddColumn(InsertEndOfMonth, "День месяца", each Date.Day([Дата])),
     InsertDayInt = Table.AddColumn(InsertDay, "Код даты", each [Год] * 10000 + [Номер месяца] * 100 + [День месяца]),
-    InsertMonthName = Table.AddColumn(InsertDayInt, "Месяц", each Date.ToText([Дата], "MMMM", "RU"), type text),
-    InsertShortMonthName = Table.AddColumn(InsertMonthName, "Мес.", each Date.ToText([Дата], "MMM", "RU"), type text),
+    InsertMonthName = Table.AddColumn(InsertDayInt, "Месяц", each Date.ToText([Дата], "MMMM", #"Культура"), type text),
+    InsertShortMonthName = Table.AddColumn(InsertMonthName, "Мес.", each Date.ToText([Дата], "MMM", #"Культура"), type text),
     InsertCalendarMonth = Table.AddColumn(InsertShortMonthName, "Месяц года", each (try([#"Мес."]) otherwise [Месяц]) & " " & Number.ToText([Год])),
     InsertCalendarQtr = Table.AddColumn(InsertCalendarMonth, "Квартал года", each "Кв." & Number.ToText([Номер квартала]) & "-" & Number.ToText([Год])),
     InsertDayWeek = Table.AddColumn(InsertCalendarQtr, "Номер дня недели", each Date.DayOfWeek([Дата],Day.Monday)),
-    InsertDayName = Table.AddColumn(InsertDayWeek, "День недели", each Date.ToText([Дата], "dddd", "RU"), type text),
-    InsertShortDayName = Table.AddColumn(InsertDayName, "День", each Date.ToText([Дата], "ddd", "RU"), type text),
+    InsertDayName = Table.AddColumn(InsertDayWeek, "День недели", each Date.ToText([Дата], "dddd", #"Культура"), type text),
+    InsertShortDayName = Table.AddColumn(InsertDayName, "День", each Date.ToText([Дата], "ddd", #"Культура"), type text),
     InsertWeekEnding = Table.AddColumn(InsertShortDayName, "Конец недели", each Date.EndOfWeek([Дата]), type date),
-    InsertWeekNumber= Table.AddColumn(InsertWeekEnding, "Номер недели", each Date.WeekOfYear([Дата])),
+    InsertWeekStartDate = Table.AddColumn(InsertWeekEnding, "Начало недели", each Date.StartOfWeek([Дата],1), type date),
+    InsertWeekNumber= Table.AddColumn(InsertWeekStartDate, "Номер недели", each Date.WeekOfYear([Дата])),
     InsertMonthnYear = Table.AddColumn(InsertWeekNumber,"Код месяца года", each [Год] * 10000 + [Номер месяца] * 100),
     InsertQuarternYear = Table.AddColumn(InsertMonthnYear,"Код квартала года", each [Год] * 10000 + [Номер квартала] * 100),
     ChangedType1 = Table.TransformColumnTypes(InsertQuarternYear,{{"Код квартала года", Int64.Type},{"Номер недели", Int64.Type},{"Квартал", type text},{"Год", type text},{"Код месяца года", Int64.Type}, {"Код даты", Int64.Type}, {"День месяца", Int64.Type}, {"Номер квартала", Int64.Type}, {"Месяц года", type text}, {"Квартал года", type text}, {"Номер дня недели", Int64.Type}})
